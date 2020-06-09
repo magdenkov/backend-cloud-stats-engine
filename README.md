@@ -1,3 +1,6 @@
+To view the app go to
+https://fe-cloud-stats.wl.r.appspot.com/  
+
 In the project directory, you can run and start on port 8080:
 
 ### `mvn clean spring-boot:run`
