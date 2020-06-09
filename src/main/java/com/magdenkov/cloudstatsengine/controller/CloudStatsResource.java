@@ -9,6 +9,7 @@ import org.apache.commons.math3.stat.StatUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -29,6 +30,20 @@ public class CloudStatsResource {
 
     private static final String IGNORE_VALUE = "-999.25";
     private static final String FORMAT_DOUBLE = "%.4f";
+
+    @GetMapping("/default")
+    public ResponseEntity getDefault(@RequestParam(value = "percentile", defaultValue = "75") Integer percentile) {
+        final String inputCsv = "DEPTH,GR,RHOB\n" +
+                "1000.0,80,-999.25\n" +
+                "1000.5,80,-999.25\n" +
+                "1001.0,85,-999.25\n" +
+                "1001.5,85,2.5\n" +
+                "1002.0,75,2.6\n" +
+                "1002.5,75,2.7";
+        final MockMultipartFile csvdata = new MockMultipartFile("file", "testdata.csv", "text/plain", inputCsv.getBytes());
+
+        return uploadToLocalFileSystem(csvdata, percentile);
+    }
 
     @PostMapping("/upload")
     public ResponseEntity uploadToLocalFileSystem(@RequestParam(value = "file") MultipartFile file,
@@ -74,13 +89,17 @@ public class CloudStatsResource {
                 .map(Double::parseDouble)
                 .collect(toList());
         // check if it is not empty IllegalArgumentException
-        final Double guavaDepthPercentile = percentiles().index(percentile).compute(depthsList);
-        response.getGuavaCalculatedPercentile().setDepth(String.format(FORMAT_DOUBLE, guavaDepthPercentile));
+        final double guavaDepthPercentile = percentiles().index(percentile).compute(depthsList);
+        response.getGuavaCalculatedPercentile().setDepth(formatResp(guavaDepthPercentile));
 
         final double apacheDepthPercentile = StatUtils.percentile(depthsList.stream()
                 .mapToDouble(Double::doubleValue)
                 .toArray(), percentile);
-        response.getApacheCalculatedPercentile().setDepth(String.format(FORMAT_DOUBLE, apacheDepthPercentile));
+        response.getApacheCalculatedPercentile().setDepth(formatResp(apacheDepthPercentile));
+    }
+
+    private String formatResp(double apacheDepthPercentile) {
+        return String.format(FORMAT_DOUBLE, apacheDepthPercentile);
     }
 
     private void calcGr(final Integer percentile, final ProcessedResponse response, final List<GeometricModel> geometricModelListInput) {
@@ -89,14 +108,14 @@ public class CloudStatsResource {
                 .filter(it -> !it.equals(IGNORE_VALUE))
                 .map(Double::valueOf)
                 .collect(toList());
-        // check if it is not empty IllegalArgumentException
-        final Double gammaRayPercentile = percentiles().index(percentile).compute(gammaRaysList);
-        response.getGuavaCalculatedPercentile().setGammaRay(String.format(FORMAT_DOUBLE, gammaRayPercentile));
+        // todo check if it is not empty for IllegalArgumentException
+        final double gammaRayPercentile = percentiles().index(percentile).compute(gammaRaysList);
+        response.getGuavaCalculatedPercentile().setGammaRay(formatResp(gammaRayPercentile));
 
         final double apacheGammaRayPercentile = StatUtils.percentile(gammaRaysList.stream()
                 .mapToDouble(Double::doubleValue)
                 .toArray(), percentile);
-        response.getApacheCalculatedPercentile().setGammaRay(String.format(FORMAT_DOUBLE, apacheGammaRayPercentile));
+        response.getApacheCalculatedPercentile().setGammaRay(formatResp(apacheGammaRayPercentile));
     }
 
     private void calcRhob(final Integer percentile, final ProcessedResponse response, final List<GeometricModel> geometricModelListInput) {
@@ -105,14 +124,15 @@ public class CloudStatsResource {
                 .filter(it -> !it.equals(IGNORE_VALUE))
                 .map(Double::valueOf)
                 .collect(toList());
-        // check if it is not empty IllegalArgumentException
-        final Double guavaRhobsPercentile = percentiles().index(percentile).compute(phobsList);
-        response.getGuavaCalculatedPercentile().setRhob(String.format(FORMAT_DOUBLE, guavaRhobsPercentile));
+        // todo check if it is not empty for IllegalArgumentException
+
+        final double guavaRhobsPercentile = percentiles().index(percentile).compute(phobsList);
+        response.getGuavaCalculatedPercentile().setRhob(formatResp(guavaRhobsPercentile));
 
         final double apachRhobPercentile = StatUtils.percentile(phobsList.stream()
                 .mapToDouble(Double::doubleValue)
                 .toArray(), percentile);
-        response.getApacheCalculatedPercentile().setRhob(String.format(FORMAT_DOUBLE, apachRhobPercentile));
+        response.getApacheCalculatedPercentile().setRhob(formatResp(apachRhobPercentile));
     }
 
     private List<GeometricModel> parseCsv(final Reader reader) {
