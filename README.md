@@ -12,3 +12,11 @@ Deploy to GCP:
 ### `mvn appengine:run`
 
 ### `mvn -DskipTests appengine:deploy`
+
+
+mvn -DskipTests appengine:deploy
+gcloud app deploy
+npm start
+gcloud app deploy
+gcloud init
+npm run build
